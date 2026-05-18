@@ -1,4 +1,4 @@
-const API_URL = 'https://ticket-app-backend-production-c69a.up.railway.app/api';
+const API_URL = 'https://ticket-app-backend-production-63b5.up.railway.app/api';
 
 // Load semua tiket yang tersedia
 export async function loadTickets(containerId, limit_count = null) {

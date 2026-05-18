@@ -118,7 +118,7 @@
     </script>
     
     <script type="module">
-        import { loginWithEmail, registerWithEmail, verifyEmailOTP } from './js/auth.js';
+        import { loginWithEmail, registerWithEmail } from './js/auth.js';
         
         let registeredEmail = "";
 
@@ -156,7 +156,7 @@
             const success = await registerWithEmail(email, password, name);
             if (success) {
                 registeredEmail = email; // Simpan email untuk verifikasi
-                showVerify(); // Tampilkan box OTP jika sukses
+                showLogin(); // Tampilkan box Login jika sukses karna OTP ndak bisa kalo pake railway gratis
             }
         });
 

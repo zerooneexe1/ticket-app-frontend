@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Ticket - Ticket App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
+    <link rel="stylesheet" href="fontawesome/css/solid.css">
+    <link rel="stylesheet" href="fontawesome/css/regular.css">    
+    <link rel="stylesheet" href="fontawesome/css/thin.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="js/toast.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1><div class="img-logo" style="width: 12.45rem; height: 1.75rem; background-image: url(./images/ticket.png); background-size: cover;" /></h1>
+            </div>
+            <div class="nav-menu">
+                <a href="./">Home</a>
+                <a href="#" onclick="window.print()">Print</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="ticket-page">
+        <div class="ticket-container" id="ticket-container">
+            <div class="loading">
+                <p style="margin-bottom: 3vh;">Memuat tiket...</p>
+            </div>
+        </div>
+        
+        <div class="ticket-actions">
+            <button onclick="window.print()" class="btn btn-primary">Print Tiket</button>
+            <a href="./" class="btn btn-secondary">Kembali ke Home</a>
+            <a href="./my-tickets.html" class="btn btn-tertiary">
+                <i class="fa-solid fa-arrow-left"></i> Kembali ke Tiket Saya
+            </a>
+        </div>
+    </div>
+
+    <script type="module">
+    import { getTicketByCode } from './js/tickets.js';
+    import { initAuth } from './js/auth.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticketCode = urlParams.get('code');
+
+    if (!ticketCode) {
+        window.location.href = './';
+    }
+
+    initAuth(async (user) => {
+        if (!user) {
+            window.location.href = './login.html';
+            return;
+        }
+
+        await loadTicket();
+    });
+
+    async function loadTicket() {
+        try {
+            const ticket = await getTicketByCode(ticketCode);
+                        
+            if (ticket) {
+                if (ticket.status === 'pending') {
+                    document.getElementById('ticket-container').innerHTML = `
+                        <div class="error">
+                            <h2>Menunggu Pembayaran</h2>
+                            <p>Pembayaran untuk tiket ini belum selesai. <br><a href="./payment.html?id=${ticket.ticketCode}">Klik di sini untuk membayar</a></p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const container = document.getElementById('ticket-container');
+                container.innerHTML = `
+                    <div class="ticket">
+                        <div class="ticket-header">
+                            <h2><i class="fa-solid fa-ticket ticket-icon"></i>E-Ticket</h2>
+                            <p>Ticket App</p>
+                        </div>
+                        <div class="ticket-body">
+                            <div class="ticket-event">
+                                <h3>${ticket.ticketName}</h3>
+                            </div>
+                            <div class="ticket-code-section">
+                                <p class="code-label">Kode Tiket:</p>
+                                <div class="ticket-code">${ticket.ticketCode}</div>
+                            </div>
+                            <div class="ticket-details">
+                                <div class="detail">
+                                    <span class="label">Nama:</span>
+                                    <span class="value">${ticket.userEmail}</span>
+                                </div>
+                                <div class="detail">
+                                    <span class="label">Harga:</span>
+                                    <span class="value">Rp ${ticket.price.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div class="detail">
+                                    <span class="label">Tanggal Pembelian:</span>
+                                    <span class="value">${new Date(ticket.createdAt).toLocaleDateString('id-ID')}</span>
+                                </div>
+                                <div class="detail">
+                                    <span class="label">Berlaku hingga:</span>
+                                    <span class="value">${new Date(ticket.expiresAt).toLocaleDateString('id-ID')}</span>
+                                </div>
+                            </div>
+                            <div class="ticket-qr">
+                                <div id="ticket-qrcode"></div>
+                            </div>
+                            <div class="ticket-footer">
+                                <p>✨ Tunjukkan tiket ini di pintu masuk ✨</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Generate QR code
+                new QRCode(document.getElementById('ticket-qrcode'), {
+                    text: JSON.stringify({
+                        code: ticket.ticketCode,
+                        event: ticket.ticketName,
+                        email: ticket.userEmail
+                    }),
+                    width: 200,
+                    height: 200
+                });
+            } else {
+                showError();
+            }
+        } catch (error) {
+            console.error("Gagal memuat tiket:", error);
+            showError();
+        }
+    }
+
+    function showError() {
+        document.getElementById('ticket-container').innerHTML = `
+            <div class="error">
+                <h2>Tiket tidak ditemukan!</h2>
+                <p>Kode tiket tidak valid, belum dibayar, atau telah kadaluarsa.</p>
+            </div>
+        `;
+    }
+    </script>
+
+    <style>
+        .ticket-page {
+            min-height: calc(100vh - 80px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+        }
+        
+        .ticket-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .error {
+            margin-top: 18vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .ticket {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .ticket::before,
+        .ticket::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .ticket::before {
+            left: -15px;
+        }
+        
+        .ticket::after {
+            right: -15px;
+        }
+        
+        .ticket-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .ticket-header h2 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .ticket-icon {
+            font-size: 7vh;
+            margin-right: 2vw;
+        }
+
+        .ticket-body {
+            padding: 40px 30px;
+            background: white;
+            position: relative;
+        }
+        
+        .ticket-body::before,
+        .ticket-body::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+        }
+        
+        .ticket-body::before {
+            top: 0;
+        }
+        
+        .ticket-body::after {
+            bottom: 0;
+        }
+        
+        .ticket-event h3 {
+            text-align: center;
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .ticket-code-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .code-label {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .ticket-code {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: monospace;
+            letter-spacing: 10px;
+            color: #667eea;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .ticket-details {
+            margin: 30px 0;
+        }
+        
+        .detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .detail:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .value {
+            color: #333;
+        }
+        
+        .ticket-qr {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .ticket-footer {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 30px;
+        }
+        
+        .ticket-actions {
+            text-align: center;
+            margin-top: 30px;
+            display: grid;
+            gap: 2vh;
+        }
+        
+        .ticket-actions button,
+        .ticket-actions a {
+            margin: 0;
+        }
+        
+        @media screen and (min-width: 720px) {
+
+            .ticket-actions {
+                justify-content: center;
+            }
+
+            .btn.btn-primary, .btn.btn-secondary, .btn.btn-tertiary {
+                width: 500px;
+            }
+        }
+
+        .btn-tertiary {
+            text-decoration: none; 
+            text-align: center; 
+            padding: 15px 30px;
+            background: #eee; 
+            color: #333; 
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        @media print {
+            .navbar, .ticket-actions, .ticket::before, .ticket::after {
+                display: none;
+            }
+            
+            .ticket-page {
+                background: white;
+                padding: 0;
+            }
+
+            
+            
+        }
+    </style>
+</body>
+</html>

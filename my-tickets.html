@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/icon.png">
+    <title>Tiket Saya - Ticket App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
+    <link rel="stylesheet" href="fontawesome/css/solid.css">
+    <link rel="stylesheet" href="fontawesome/css/regular.css">    
+    <link rel="stylesheet" href="fontawesome/css/thin.css">
+    <script src="js/toast.js"></script>
+    <style>
+        .my-tickets-container { max-width: 800px; margin: 100px auto 50px; padding: 20px; }
+        .h2-my-tickets { display:flex; flex-direction: row; justify-content: center; }
+        .icon-multi-ticket { padding-right: 1vh;}
+        .ticket-card { display: flex; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
+        .ticket-image { width: 150px; height: 210px; background-size: cover; background-position: center; position: relative; margin: auto 10px; }
+        .ticket-details { padding: 20px; flex: 1; }
+        .ticket-title { margin: 0 0 10px 0; font-size: 1.2em; color: #333; }
+        .ticket-status { display: inline-block; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8em; text-transform: uppercase; margin-bottom: 10px; }
+        .status-pending { background-color: #f39c12; color: white; }
+        .status-settlement, .status-success, .status-completed { background-color: #2ecc71; color: white; }
+        .status-expire, .status-cancel { background-color: #e74c3c; color: white; }
+        .btn-action { display: inline-block; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; color: white; background: #3498db; margin-top: 10px; border: none; cursor: pointer;}
+        .btn-action:hover { background: #2980b9; }
+        @media (max-width: 600px) { .ticket-card { flex-direction: column; } .ticket-image { width: 100%; height: 150px; margin: auto; } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1><div class="img-logo" style="width: 12.45rem; height: 1.75rem; background-image: url(./images/ticket.png); background-size: cover;" /></h1>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="./">Home</a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="my-tickets-container">
+        <h2 class="h2-my-tickets">
+            <!-- <div class="icon-multi-ticket">
+                <i class="fa-solid fa-ticket"></i><i class="fa-solid fa-ticket"></i>
+            </div> -->
+            Tiket Saya
+        </h2>
+        <div id="tickets-list">
+            <p style="text-align: center;">Memuat tiket...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        document.getElementById('hamburger').addEventListener('click', () => {
+            document.getElementById('nav-menu').classList.toggle('active');
+        });
+    </script>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:3000/api';
+
+        const token = localStorage.getItem('ticketAppToken');
+        const userStr = localStorage.getItem('ticketAppUser');
+
+        async function loadMyTickets() {
+            const container = document.getElementById('tickets-list');
+            if (!container) return;
+
+            if (!token || !userStr) {
+                alert('Silakan login terlebih dahulu!');
+                window.location.href = './login.html';
+                return;
+            }
+
+            const user = JSON.parse(userStr);
+
+            try {
+                container.innerHTML = '<p style="text-align:center;">Memuat tiket Anda...</p>';
+
+                const response = await fetch(`${API_URL}/payments/user/${user.id}`);
+                const tickets = await response.json();
+
+                if (!response.ok) throw new Error(tickets.message);
+
+                if (tickets.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#666;">Anda belum pernah memesan tiket.</p>';
+                    return;
+                }
+
+                container.innerHTML = tickets.map(t => {
+                    let statusClass = 'status-pending';
+                    let actionButton = '';
+            
+                    // Menggunakan payment_status dari API baru kita
+                    if (t.payment_status === 'pending') {
+                        statusClass = 'status-pending';
+                        // Jika masih pending, arahkan ke halaman payment.html menggunakan payment_code
+                        actionButton = `
+                            <button class="btn-action" 
+                                style="background:#f39c12;" 
+                                onclick="window.location.href='./payment.html?id=${t.payment_code}'">Selesaikan Pembayaran
+                            </button>`;
+                    } else if (t.payment_status === 'completed') {
+                        statusClass = 'status-completed';
+                        // Jika sudah completed/acc, arahkan ke ticket.html menggunakan ticket_code
+                        actionButton = `
+                            <button class="btn-action" 
+                                style="background:#2ecc71;" 
+                                onclick="window.location.href='./ticket.html?code=${t.ticket_code}'">Lihat E-Ticket
+                            </button>`;
+                    } else {
+                        statusClass = 'status-failed';
+                        actionButton = `<button class="btn-action" style="background:#7f8c8d;" disabled>Gagal / Kedaluwarsa</button>`;
+                    }
+
+                    return `
+                        <div class="ticket-card">
+                            <div class="ticket-image" style="background-image: url('${t.ticket_image || 'https://via.placeholder.com/300x200'}');"></div>
+                            <div class="ticket-details">
+                                <span class="ticket-status ${statusClass}">${t.payment_status.toUpperCase()}</span>
+                                <h3 class="ticket-title">${t.ticket_name || 'Tiket Event'}</h3>
+                                <p style="margin: 5px 0; color: #666; font-size: 0.9em;">
+                                    ${t.ticket_code ? `No. Tiket: <strong>${t.ticket_code}</strong>` : `Kode Bayar: <strong>${t.payment_code}</strong>`}
+                                </p>
+                                <p style="margin: 5px 0; font-weight: bold;">Rp ${t.amount.toLocaleString('id-ID')}</p>
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p style="color: red; text-align: center;">Terjadi kesalahan saat memuat tiket.</p>`;
+            }
+        }
+
+        // Panggil saat halaman dimuat
+        loadMyTickets();
+    </script>
+</body>
+</html>

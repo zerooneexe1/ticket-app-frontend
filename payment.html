@@ -1,0 +1,309 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/icon.png">
+    <title>Payment - Ticket App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
+    <link rel="stylesheet" href="fontawesome/css/brands.css">
+    <link rel="stylesheet" href="fontawesome/css/solid.css">
+    <link rel="stylesheet" href="fontawesome/css/regular.css">
+    <script src="js/toast.js"></script>
+    </head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1><div class="img-logo" style="width: 12.45rem; height: 1.75rem; background-image: url(./images/ticket.png); background-size: cover;" /></h1>
+            </div>
+            <div class="nav-menu">
+                <a href="./">Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="payment-page">
+        <div class="payment-container">
+            <h2>Complete Your Payment</h2>
+            
+            <div class="payment-details" id="payment-details">
+                <div class="loading">
+                    <p style="margin-bottom: 3vh;">Memuat detail pembayaran...</p>
+                </div>
+            </div>
+            
+            <div class="qr-section">
+                <h3>Selesaikan Pembayaran Anda</h3>
+                <button id="pay-button" class="btn-primary" style="font-size: 1.2em; padding: 15px 30px; display: none; margin: 20px auto;">
+                Bayar Sekarang
+                </button>
+            </div>
+            
+            <div class="payment-status">
+                <div class="status-pending">
+                    <div class="loader"></div>
+                    <p>Menunggu pembayaran...</p>
+                </div>
+                <div class="status-completed" style="display: none;">
+                    <div class="success-icon">✓</div>
+                    <p>Pembayaran berhasil!</p>
+                    <p>Mengarahkan ke tiket Anda...</p>
+                </div>
+            </div>
+            
+            <div class="payment-instructions">
+                <h4>Cara Pembayaran:</h4>
+                <ol>
+                    <li>Scan QR code di atas menggunakan aplikasi pembayaran</li>
+                    <li>Masukkan nominal yang sesuai</li>
+                    <li>Konfirmasi pembayaran</li>
+                    <li>Tiket akan otomatis muncul setelah pembayaran berhasil</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    const API_URL = 'http://127.0.0.1:3000/api';
+    const NOMOR_WA_ADMIN = '6285852849326'; // <-- GANTI DENGAN NOMOR WA KAMU
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentId = urlParams.get('id'); // Ini payment_code
+    let checkInterval;
+
+    if (!paymentId) {
+        alert('Data pembayaran tidak valid!');
+        window.location.href = './';
+    }
+
+    async function loadPaymentDetails() {
+        try {
+            const response = await fetch(`${API_URL}/payments/${paymentId}`);
+            const payment = await response.json();
+
+            if (!response.ok) throw new Error(payment.message);
+
+            const detailsContainer = document.getElementById('payment-details');
+            detailsContainer.innerHTML = `
+                <div class="detail" style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                    <span class="label">Kode Pembayaran:</span>
+                    <span class="value" style="font-weight: bold;">${payment.payment_code}</span>
+                </div>
+                <div class="detail" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span class="label">Total Tagihan:</span>
+                    <span class="value" style="font-size: 1.2em; font-weight: bold; color: #d9534f;">Rp ${payment.amount.toLocaleString('id-ID')}</span>
+                </div>
+            `;
+
+            const qrSection = document.querySelector('.qr-section');
+            const statusSection = document.querySelector('.payment-status');
+            
+            // JIKA STATUS PENDING
+            if (payment.status === 'pending') {
+                qrSection.innerHTML = `
+                    <h3>Scan QRIS Berikut</h3>
+                    <img src="./images/QRIS.jpg" alt="QRIS" style="width: 100%; border: 2px solid #ddd; border-radius: 10px;">
+                    <p style="margin-top: 15px; font-weight: bold;">Setelah transfer, konfirmasi ke Admin kami!</p>
+                    <a href="https://wa.me/${NOMOR_WA_ADMIN}?text=Halo%20Admin,%20saya%20sudah%20membayar%20tiket.%0AKode%20Pembayaran:%20${payment.payment_code}%0ATotal:%20Rp%20${payment.amount}" 
+                       target="_blank" 
+                       style="display: inline-block; background: #25D366; color: white; padding: 12px 25px; border-radius: 5px; text-decoration: none; font-weight: bold; margin-top: 30px; font-size:3vh;">
+                        <i class="fa-brands fa-whatsapp"></i> Konfirmasi via WhatsApp
+                    </a>
+                `;
+
+                // Mulai auto-cek status setiap 5 detik
+                if(!checkInterval) {
+                    checkInterval = setInterval(cekStatusOtomatis, 5000);
+                }
+            } 
+            // JIKA STATUS COMPLETED
+            else if (payment.status === 'completed' && payment.ticket_code) {
+                if(checkInterval) clearInterval(checkInterval);
+                statusSection.innerHTML = `
+                    <div class="status-completed" style="text-align: center;">
+                        <i class="fa-solid fa-check" style="background:#4CAF50; color:white; font-size:30px; width:60px; height:60px; line-height:60px; border-radius:50%; margin: 0 auto 15px;"></i>
+                        <p style="font-weight:bold; color: #4CAF50; font-size:1.2em;">Pembayaran Berhasil Diverifikasi!</p>
+                        <p style="margin-top: 5px;">Mengarahkan ke E-Ticket Anda...</p>
+                    </div>
+                `;
+                qrSection.style.display = 'none';
+                
+                // Redirect ke halaman tiket dengan ticket_code dari tickets_sold
+                setTimeout(() => {
+                    window.location.href = `./ticket.html?code=${payment.ticket_code}`;
+                }, 2000);
+            }
+
+        } catch (error) {
+            document.getElementById('payment-details').innerHTML = `<p style="color: red; text-align: center;">${error.message}</p>`;
+        }
+    }
+
+    async function cekStatusOtomatis() {
+        const response = await fetch(`${API_URL}/payments/${paymentId}`);
+        
+        if (response.status === 401) {
+            alert('Sesi login Anda telah berakhir. Silakan login kembali.');
+            localStorage.removeItem('ticketAppToken');
+            localStorage.removeItem('ticketAppUser');
+            window.location.href = './login.html';
+            return;
+        }
+
+        const data = await response.json();
+        if (data.status === 'completed') {
+            loadPaymentDetails(); // Refresh UI dan Redirect
+        }
+    }
+
+    loadPaymentDetails();
+</script>
+    <style>
+        .payment-page {
+            min-height: calc(100vh - 80px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            margin-top: 2rem;
+        }
+        
+        .payment-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .payment-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .payment-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .detail-value {
+            color: #333;
+        }
+        
+        .detail-value.code {
+            font-family: monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .qr-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .qr-section h3 {
+            margin-bottom: 20px;
+            color: #555;
+        }
+        
+        .qr-code {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .qr-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .payment-status {
+            margin: 30px 0;
+        }
+        
+        .status-pending, .status-completed {
+            text-align: center;
+        }
+        
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-icon {
+            width: 60px;
+            height: 60px;
+            background: #4CAF50;
+            color: white;
+            font-size: 30px;
+            line-height: 60px;
+            text-align: center;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+        }
+        
+        .payment-instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        
+        .payment-instructions h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .payment-instructions ol {
+            padding-left: 20px;
+            color: #666;
+        }
+        
+        .payment-instructions li {
+            margin: 5px 0;
+        }
+        
+        .status-completed {
+            color: #4CAF50;
+        }
+        
+        .status-pending {
+            color: #ff9800;
+        }
+    </style>
+</body>
+</html>

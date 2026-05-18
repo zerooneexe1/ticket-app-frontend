@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/icon.png">
+    <title>Ticket App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
+    <link rel="stylesheet" href="fontawesome/css/solid.css">
+    <link rel="stylesheet" href="fontawesome/css/regular.css">
+    <link rel="stylesheet" href="fontawesome/css/brands.css">    
+    <link rel="stylesheet" href="fontawesome/css/thin.css">
+    <script src="js/toast.js"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1><div class="img-logo" style="width: 12.45rem; height: 1.75rem; background-image: url(./images/ticket.png); background-size: cover;" /></h1>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#home">Home</a>
+                <a href="#features">Fitur</a>
+                <a href="#about">Tentang</a>
+                <a href="#contact">Kontak</a>
+                <a href="./my-tickets.html" id="my-tickets-link" style="display: none;">Tiket Saya</a>
+                <a href="./admin.html" id="admin-link" style="display: none; font-weight: bold; /* color: #4fd99b; */">Panel Admin</a>
+                <div id="auth-buttons">
+                    <script type="module" src="js/auth.js"></script>
+                    <!-- Auth buttons will be inserted here by JavaScript -->
+                </div>
+                <div id="user-profile" style="display: none;">
+                    <i class="fa-solid fa-circle-user user-icon"></i>
+                    <span id="user-name"></span>
+                    <button onclick="logout()" class="btn-logout">Logout</button>
+                </div>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>Beli Tiket <span class="highlight">Mudah & Cepat</span></h1>
+                <p>Dapatkan tiket untuk acara favorit Anda dengan mudah. Proses pembayaran aman dan tiket instan langsung dikirim ke email Anda.</p>
+                <div class="hero-buttons">
+                    <a href="#preview-events" class="btn-primary">Lihat Tiket Tersedia</a>
+                    <a href="#features" class="btn-secondary">Pelajari Lebih Lanjut</a>
+                </div>
+            </div>
+            <!-- <div class="hero-image">
+                <img src="https://via.placeholder.com/500x400" alt="Hero Image">
+            </div> -->
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Mengapa membeli di <span class="highlight">Web?</span></h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fa-solid fa-shop-lock feature-icon"></i>
+                    <h3>Login Aman</h3>
+                    <p>Login dengan email Anda dengan keamanan terjamin.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-ticket feature-icon"></i>
+                    <h3>Tiket Instan</h3>
+                    <p>Dapatkan tiket dengan 6 digit kode unik segera setelah pembayaran berhasil.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-qrcode feature-icon"></i>
+                    <h3>QR Code Payment</h3>
+                    <p>Pembayaran mudah dengan scan QR code menggunakan berbagai metode.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fa-solid fa-bolt feature-icon"></i>
+                    <h3>Proses Cepat</h3>
+                    <p>Transaksi cepat dan real-time tanpa perlu menunggu lama.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">Cara <span class="highlight">Kerja</span></h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Daftar/Login</h3>
+                    <p>Daftar menggunakan akun email</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Pilih Tiket</h3>
+                    <p>Pilih tiket acara yang tersedia</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Scan QR</h3>
+                    <p>Scan QR code untuk pembayaran</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Dapatkan Tiket</h3>
+                    <p>Terima tiket dengan 6 digit kode unik</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Available Events Preview -->
+    <section id="preview-events" class="preview-events">
+        <div class="container">
+            <h2 class="section-title">Upcoming <span class="highlight">Event</span></h2>
+            <div class="events-grid" id="preview-tickets"></div>
+            <div class="center-button">
+                <a href="#preview-events" class="btn-primary" onclick="loadMoreTickets()">Lihat Semua Event</a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <h2 class="section-title">Tentang <span class="highlight">Kami</span></h2>
+                <p>Ticket App adalah platform penjualan tiket online yang memudahkan Anda untuk membeli tiket berbagai acara. Kami hadir untuk memberikan pengalaman pembelian tiket yang mudah, cepat, dan aman.</p>
+                <p>Dengan sistem keamanan terjamin dan proses real-time, Anda bisa mendapatkan tiket instan tanpa harus antri atau khawatir kehabisan tiket.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section-title">Hubungi <span class="highlight">Kami</span></h2>
+            <div class="contact-container">
+                <div class="contact-info">
+                    <h3>Informasi Kontak</h3>
+                    <p><i class="fa-solid fa-phone"></i> +62 123 4567 890</p>
+                    <p><i class="fa-solid fa-envelope"></i> info@ticketapp.com</p>
+                    <p><i class="fa-solid fa-map-pin"></i> Jakarta, Indonesia</p>
+                </div>
+                <form class="contact-form" id="contact-form">
+                    <input type="text" placeholder="Nama Anda" required>
+                    <input type="email" placeholder="Email Anda" required>
+                    <textarea placeholder="Pesan Anda" rows="5" required></textarea>
+                    <button type="submit" class="btn-primary">Kirim Pesan</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Ticket App</h3>
+                    <p>Solusi pembelian tiket online terpercaya untuk berbagai acara.</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-links">
+                        <a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-facebook"></i> Facebook</a>
+                        <a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram"></i> Instagram</a>
+                        <a href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p><i class="fa-regular fa-copyright"></i> 2024 W/TECH. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initAuth, logout } from './js/auth.js';
+        import { loadTickets } from './js/tickets.js';
+        
+        window.logout = logout;
+
+        let currentLimit = 3; // Menentukan jumlah tiket awal
+        const TICKETS_PER_CLICK = 3; // Berapa tiket tambahan tiap kali klik
+    
+        window.loadMoreTickets = () => {
+            currentLimit += TICKETS_PER_CLICK;
+            loadTickets('preview-tickets', currentLimit);
+        };
+        // Initialize authentication
+        initAuth((user) => {
+            const authButtons = document.getElementById('auth-buttons');
+            const userProfile = document.getElementById('user-profile');
+            
+            if (user) {
+                
+                authButtons.style.display = 'none';
+                userProfile.style.display = 'flex';
+                
+                const myTicketsLink = document.getElementById('my-tickets-link');
+                if (myTicketsLink) {
+                    myTicketsLink.style.display = 'inline-block';
+                }
+                
+                const userNameEl = document.getElementById('user-name');
+                if (userNameEl) {
+                    if (user.userData?.name) {
+                        userNameEl.textContent = user.userData?.name.trim().split(' ')[0] || user.user?.email || 'User';
+                    } else {
+                        userNameEl.textContent = user.userData?.name || user.user?.email || 'User';
+                    }
+                }
+                                
+                const userAvatarEl = document.getElementById('user-avatar');
+                if (userAvatarEl) {
+                    userAvatarEl.src = user.userData?.photoURL || 'https://via.placeholder.com/150';
+                }
+                
+                const adminLink = document.getElementById('admin-link');
+                
+                if (adminLink && (user.role === 'admin' || user.isAdmin === true)) {
+                    adminLink.style.display = 'inline-block'; // Munculkan tombol
+                } else if (adminLink) {
+                    adminLink.style.display = 'none'; // Sembunyikan untuk user biasa
+                }
+
+            } else {
+                
+                authButtons.style.display = 'flex';
+                userProfile.style.display = 'none';
+                
+                const adminLink = document.getElementById('admin-link');
+                if (adminLink) adminLink.style.display = 'none';
+                
+                authButtons.innerHTML = `
+                    <a href="./login.html" class="btn-login">Login</a>
+                    <a href="./login.html" class="btn-register">Daftar</a>
+                `;
+            }
+        });
+        
+        loadTickets('preview-tickets', currentLimit);
+        
+        document.getElementById('hamburger').addEventListener('click', () => {
+            document.getElementById('nav-menu').classList.toggle('active');
+        });
+        
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.showToast('Pesan Anda telah dikirim! Kami akan segera merespon.', 'success', 3000);
+            e.target.reset();
+        });
+    </script>
+</body>
+</html>

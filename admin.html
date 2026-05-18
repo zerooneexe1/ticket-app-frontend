@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/icon.png">    
+    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
+    <link rel="stylesheet" href="fontawesome/css/solid.css">
+    <link rel="stylesheet" href="fontawesome/css/regular.css">    
+    <link rel="stylesheet" href="fontawesome/css/thin.css">
+    <title>Admin Panel - Ticket App</title>
+    
+    <script>
+        const userStr = localStorage.getItem('ticketAppUser');
+        let isAdmin = false;
+
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                // Cek apakah rolenya admin
+                if (user.role === 'admin') {
+                    isAdmin = true;
+                }
+            } catch (e) {}
+        }
+
+        // Jika bukan admin atau belum login, ganti layar dengan JSON
+        if (!isAdmin) {
+            document.documentElement.innerHTML = `
+<pre style="word-wrap: break-word; white-space: pre-wrap; font-family: monospace; /* background: #1e1e1e; color: #00ff00; padding: 20px; */">
+{
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Akses Ditolak. Halaman ini hanya untuk Administrator."
+}
+</pre>`;
+            window.stop(); // Hentikan proses loading web
+            throw new Error("Unauthorized Access"); // Hentikan eksekusi script di bawahnya
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <script type="module" src="js/tickets.js"></script>
+    <script src="js/toast.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1><div class="img-logo" style="width: 15.25rem; height: 1.75rem; background-image: url(./images/admin.png); background-size: cover;" /></h1></h1>
+            </div>
+            <div class="nav-menu">
+                <a href="./">Home</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="admin-page">
+        <div class="admin-container">
+            <h1>Admin Panel</h1>
+            
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showTab('tickets')">Tickets</button>
+                <button class="tab-btn" onclick="showTab('add')">Add Ticket</button>
+                <button class="tab-btn" onclick="showTab('users')">Users</button>
+                <button class="tab-btn" onclick="showTab('payments')">Payments</button>
+            </div>
+            
+            <div id="tickets-tab" class="tab-content active">
+                <h2>Manage Tickets</h2>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nama Event</th>
+                                <th>Harga</th>
+                                <th>Kuota</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tickets-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="add-tab" class="tab-content">
+                <h2>Tambah Tiket Baru</h2>
+                <form id="add-ticket-form" style="max-width: 500px; margin: 0 auto; box-shadow: lightgray 0 0 20px 0px; padding: 4vh; border-radius: 3vh;">
+                    <input type="text" id="ticket-name" placeholder="Nama Event" required>
+                    <input type="number" id="ticket-price" placeholder="Harga (Contoh: 50000)" required>
+                    <input type="number" id="ticket-quantity" placeholder="Kuota Tiket" required>
+                    <input type="url" id="ticket-image" placeholder="URL Gambar (Opsional)">
+                    <p class="txt-ticket-date">Tanggal Event</p>
+                    <input type="date" id="ticket-date" required>
+                    <input type="text" id="ticket-loc" placeholder="Lokasi Event" required>
+                    <textarea id="ticket-desc" placeholder="Deskripsi Event" rows="4"></textarea>
+                    <button type="submit" style="margin-top: 15px; border-radius: 2vh;">Simpan Tiket</button>
+                </form>
+            </div>
+
+            <div id="users-tab" class="tab-content">
+                <h2>Daftar Pengguna</h2>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="payments-tab" class="tab-content">
+                <h2>Riwayat Pembayaran</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">*Status pembayaran perlu diupdate oleh Admin.</p>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Bayar</th>
+                                <th>User</th>
+                                <th>Tiket</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-table-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="admin-section tab-content" style="display: block;">
+                <h2>Riwayat Tiket Terjual (E-Ticket Aktif)</h2>
+                <div style="overflow-x: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Tiket</th>
+                                <th>Data Pembeli</th>
+                                <th>Nama Tiket</th>
+                                <th>Tanggal Beli</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sold-tickets-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:3000/api';
+        const token = localStorage.getItem('ticketAppToken');
+
+        // Logika Perpindahan Tab
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            // Muat data sesuai tab yang diklik
+            if (tabId === 'tickets') loadTickets();
+            if (tabId === 'users') loadUsers();
+            if (tabId === 'payments') loadPayments();
+        }
+
+        // =====================================
+        // 1. FUNGSI LOAD & HAPUS TIKET
+        // =====================================
+        async function loadTickets() {
+            const tbody = document.getElementById('tickets-table-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>';
+            try {
+                const res = await fetch(`${API_URL}/tickets`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const tickets = await res.json();
+                tbody.innerHTML = tickets.map(t => `
+                    <tr>
+                        <td>${t.name}</td>
+                        <td>Rp ${t.price.toLocaleString('id-ID')}</td>
+                        <td>${t.quantity}</td>
+                        <td><button class="btn-delete" onclick="deleteTicket(${t.id})" style="padding: 5px 10px;">Hapus</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" style="text-align:center;">Belum ada tiket</td></tr>';
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function deleteTicket(id) {
+            if (!confirm('Yakin ingin menghapus tiket ini?')) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/tickets/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                 });
+                if (res.ok) {
+                    alert('Tiket dihapus!');
+                    loadTickets();
+                }
+            } catch (err) {
+                alert('Gagal menghapus tiket');
+            }
+        }
+
+        // =====================================
+        // 2. FUNGSI TAMBAH TIKET
+        // =====================================
+        document.getElementById('add-ticket-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newTicket = {
+                name: document.getElementById('ticket-name').value,
+                price: document.getElementById('ticket-price').value,
+                quantity: document.getElementById('ticket-quantity').value,
+                image: document.getElementById('ticket-image').value,
+                event_date: document.getElementById('ticket-date').value,
+                location: document.getElementById('ticket-loc').value,
+                description: document.getElementById('ticket-desc').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/admin/tickets`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                     },
+                    body: JSON.stringify(newTicket)
+                });
+                if (res.ok) {
+                    alert('Tiket berhasil ditambahkan!');
+                    e.target.reset();
+                    document.querySelector('.tab-btn').click(); // Kembali ke tab awal
+                    loadTickets();
+                }
+            } catch (err) {
+                alert('Gagal menambah tiket');
+            }
+        });
+
+        // =====================================
+        // 3. FUNGSI LOAD USERS
+        // =====================================
+        async function loadUsers() {
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Memuat data...</td></tr>';
+            try {
+                const res = await fetch(`${API_URL}/admin/users`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401) {
+                    alert('Sesi Admin Anda telah berakhir. Silakan login kembali.');
+                    localStorage.removeItem('ticketAppToken');
+                    localStorage.removeItem('ticketAppUser');
+                    window.location.href = './login.html';
+                    return;
+                }
+
+                const users = await res.json();
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.name || '-'}</td>
+                        <td>${u.email}</td>
+                        <td style="text-transform:uppercase;">${u.role || 'user'}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3" style="text-align:center;">Belum ada user</td></tr>';
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // =====================================
+        // 4. FUNGSI LOAD PAYMENTS
+        // =====================================
+        async function loadPayments() {
+            const tbody = document.getElementById('payments-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>';
+            try {
+                const res = await fetch(`${API_URL}/admin/payments`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401) {
+                    alert('Sesi Admin Anda telah berakhir. Silakan login kembali.');
+                    localStorage.removeItem('ticketAppToken');
+                    localStorage.removeItem('ticketAppUser');
+                    window.location.href = './login.html';
+                    return;
+                }
+
+                const payments = await res.json();
+                tbody.innerHTML = payments.map(p => {
+                    let accButton = p.status === 'pending' 
+                        ? `<button onclick="accPayment(${p.id})" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">ACC</button>`
+                        : `<span style="color: #666;">-</span>`;
+
+                    return `
+                        <tr>
+                            <td style="font-weight:bold;">${p.payment_code}</td>
+                            <td>${p.user_name || 'User (ID: '+p.user_id+')'}</td>
+                            <td>${p.ticket_name || '-'}</td>
+                            <td>Rp ${p.amount.toLocaleString('id-ID')}</td>
+                            <td class="status-${p.status}" style="text-transform:uppercase;">${p.status}</td>
+                            <td>${accButton}</td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="6" style="text-align:center;">Belum ada transaksi</td></tr>';
+
+                window.accPayment = async function(paymentId) {
+                    if(!confirm('Yakin ingin menyetujui pembayaran ini? Tiket akan otomatis terbit.')) return;
+    
+                    // Ambil token langsung dari localStorage agar tidak 'undefined'
+                    const adminToken = localStorage.getItem('ticketAppToken'); 
+    
+                    try {
+                        const res = await fetch(`${API_URL}/admin/payments/${paymentId}/acc`, {
+                            method: 'PUT',
+                            headers: { 
+                                'Authorization': `Bearer ${adminToken}`, // Gunakan adminToken di sini
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (res.status === 401) {
+                            alert('Sesi Admin Anda telah berakhir. Silakan login kembali.');
+                            localStorage.removeItem('ticketAppToken');
+                            localStorage.removeItem('ticketAppUser');
+                            window.location.href = './login.html';
+                            return;
+                        }
+                        
+                        const data = await res.json();
+                        if(res.ok) {
+                            alert(data.message);
+                            // Panggil kembali fungsi loadPayments() bawaan admin.html kamu untuk refresh tabel
+                            if (typeof loadPayments === 'function') {
+                                loadPayments();
+                                loadTicketsSold(); 
+                            } else {
+                                location.reload(); // Jika fungsi tidak terjangkau, reload halaman sebagai alternatif
+                            }
+                        } else {
+                            alert(data.message || "Gagal menyetujui pembayaran");
+                        }
+                    } catch(e) {
+                        console.error(e);
+                        alert("Gagal koneksi ke server");
+                    }
+                }
+
+                } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadTicketsSold() {
+            const tbody = document.getElementById('sold-tickets-tbody');
+            if (!tbody) return;
+
+            try {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat data tiket...</td></tr>';
+        
+                const adminToken = localStorage.getItem('ticketAppToken');
+                const response = await fetch(`${API_URL}/admin/tickets-sold`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+
+                // Tangkap jika token kedaluwarsa
+                if (response.status === 401) {
+                    alert('Sesi Admin Anda telah berakhir. Silakan login kembali.');
+                    localStorage.removeItem('ticketAppToken');
+                    localStorage.removeItem('ticketAppUser');
+                    window.location.href = './login.html';
+                    return;
+                }
+
+                const soldTickets = await response.json();
+                if (!response.ok) throw new Error(soldTickets.message);
+
+                tbody.innerHTML = soldTickets.map(ts => {
+                    const dateObj = new Date(ts.created_at);
+                    const formattedDate = dateObj.toLocaleDateString('id-ID', { 
+                        day: 'numeric', month: 'short', year: 'numeric', 
+                        hour: '2-digit', minute: '2-digit' 
+                    });
+            
+                    // Logika untuk menampilkan tombol atau tidak
+                    let actionButton = '';
+                    if (ts.status === 'active') {
+                        actionButton = `<button onclick="markTicketUsed(${ts.id})" style="background: #17a2b8; color: white; border: none; padding: 10px 10px; border-radius: 3px; cursor: pointer;">Tandai Dipakai</button>`;
+                    } else if (ts.status === 'used') {
+                        actionButton = `<span style="color: #28a745; font-weight: bold;"><i class="fas fa-check"></i> Terpakai</span>`;
+                    } else {
+                        actionButton = `<span style="color: #dc3545;">Mati</span>`;
+                    }
+
+                    // Tambahkan kolom <td>${actionButton}</td> di akhir
+                    return `
+                        <tr>
+                            <td style="font-weight:bold; color: #2ecc71;">${ts.ticket_code}</td>
+                            <td>
+                                <strong>${ts.buyer_name}</strong><br>
+                                <small style="color:#666;">${ts.buyer_email}</small>
+                            </td>
+                            <td>${ts.ticket_name}</td>
+                            <td>${formattedDate}</td>
+                            <td style="text-transform:uppercase; font-weight:bold;">${ts.status}</td>
+                            <td>${actionButton}</td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="6" style="text-align:center;">Belum ada tiket yang terjual.</td></tr>';
+
+                // ==========================================
+                // FUNGSI BARU: MENANDAI TIKET TERPAKAI
+                // ==========================================
+                window.markTicketUsed = async function(id) {
+                    if(!confirm('Tandai e-ticket ini sebagai sudah terpakai (check-in)? Aksi ini tidak bisa dibatalkan.')) return;
+    
+                    const adminToken = localStorage.getItem('ticketAppToken'); 
+    
+                    try {
+                        const res = await fetch(`${API_URL}/admin/tickets-sold/${id}/use`, {
+                            method: 'PUT',
+                            headers: { 
+                                'Authorization': `Bearer ${adminToken}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+        
+                        // Pengecekan sesi admin kedaluwarsa
+                        if (res.status === 401) {
+                            alert('Sesi Admin Anda telah berakhir. Silakan login kembali.');
+                            localStorage.removeItem('ticketAppToken');
+                            localStorage.removeItem('ticketAppUser');
+                            window.location.href = './login.html';
+                            return;
+                        }
+
+                        const data = await res.json();
+                        if(res.ok) {
+                            alert(data.message); // Tampilkan pesan "Berhasil!"
+                            loadTicketsSold();   // Refresh tabel tiket terjual
+                        } else {
+                            alert(data.message || "Gagal mengubah status tiket");
+                        }
+                    } catch(e) {
+                        console.error(e);
+                        alert("Gagal koneksi ke server");
+                    }
+                }
+
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat data tiket.</td></tr>';
+            }
+        }
+
+        function logout() {
+            // Hapus token dari memory browser
+            localStorage.removeItem('ticketAppToken');
+            localStorage.removeItem('ticketAppUser');
+            window.location.href = './';
+        }
+
+        // Panggil fungsi saat halaman pertama kali dimuat
+        window.onload = loadTickets;
+        loadTicketsSold();
+    </script>
+
+    <style>
+        .admin-page {
+            min-height: calc(100vh - 80px);
+            background: #f8f9fa;
+            padding: 40px 20px;
+            margin-top: 7vh;
+        }
+        
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .admin-container h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #666;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn:hover {
+            background: #e9ecef;
+        }
+        
+        .tab-btn.active {
+            /* background: #667eea; */
+            background: #a4b4be;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .admin-form {
+            max-width: 600px;
+        }
+        
+        .admin-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .admin-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .admin-form input,
+        .admin-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .admin-form input:focus,
+        .admin-form textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .txt-ticket-date {
+            color:#666;
+            margin: 10px 0 0 5px;
+        }
+        
+        .admin-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            transition: background 0.3s;
+        }
+        
+        .admin-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .row-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .row-info strong {
+            min-width: 150px;
+        }
+        
+        .row-info .quantity {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .row-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .row-actions button {
+            padding: 5px 15px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        
+        .btn-make-admin {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-make-admin:hover {
+            background: #218838;
+        }
+        
+        .btn-view {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-view:hover {
+            background: #138496;
+        }
+        
+        .status-pending {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .status-failed {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            display: grid;
+            justify-items: center;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+        }
+
+        .admin-table {
+            display: table;
+            width: 100%;
+        }
+
+        thead tr {
+            background-color: #475367; 
+            color: #e0edee; 
+            text-align: left;
+            font-weight: bold;
+
+        }
+
+        th, td {
+            padding: 12px 15px; /* Adds space inside cells */
+            text-align: left;
+        }
+
+        th:nth-child(3), th:nth-child(4),  th:nth-child(5), th:nth-child(6){
+            text-align: center;
+        }
+
+        td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6) {
+            text-align: center;
+            align-items: center;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #dddddd; /* Horizontal dividers */
+            background-color: #ffffff;
+        }
+
+        tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3; /* Zebra-striping: alternating row colors for readability */
+        }
+
+        tbody tr:last-of-type {
+            border-bottom: 2px solid #009879; /* Darker border for the last row */
+        }
+
+        tr.view-payments th {
+            text-align: center;
+        }
+    </style>
+</body>
+</html>

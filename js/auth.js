@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:3000/api/auth';
+const API_URL = 'https://ticket-app-backend-production-c69a.up.railway.app/api/auth';
 
 // Login dengan API Node.js
 export async function loginWithEmail(email, password) {

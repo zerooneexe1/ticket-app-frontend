@@ -35,9 +35,9 @@
 }
 </pre>`;
             window.stop(); // Hentikan proses loading web
-            throw new Error("Unauthorized Access"); // Hentikan eksekusi script di bawahnya
             setTimeout(() => {
                 window.location.href = "./";}, 3000);
+            throw new Error("Unauthorized Access"); // Hentikan eksekusi script di bawahnya
         }
     </script>
     <link rel="stylesheet" href="css/style.css">

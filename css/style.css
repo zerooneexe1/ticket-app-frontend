@@ -437,6 +437,10 @@ button:hover {
     margin-bottom: 15px;
 }
 
+p.description {
+    margin-bottom: 1rem;
+}
+
 .btn-beli {
     display: inline-block;
     padding: 8px 20px;

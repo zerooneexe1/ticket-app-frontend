@@ -545,6 +545,7 @@ button:hover {
 }
 
 .contact-info p {
+    display: ruby-text;
     margin: 10px 0;
     color: #666;
 }

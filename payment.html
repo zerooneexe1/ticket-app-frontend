@@ -1,309 +1,97 @@
-﻿<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="images/icon.png">
-    <title>Payment - Ticket App</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="stylesheet" href="fontawesome/css/fontawesome.css">
-    <link rel="stylesheet" href="fontawesome/css/brands.css">
-    <link rel="stylesheet" href="fontawesome/css/solid.css">
-    <link rel="stylesheet" href="fontawesome/css/regular.css">
-    <script src="js/toast.js"></script>
-    </head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <h1><div class="img-logo" style="width: 12.45rem; height: 1.75rem; background-image: url(./images/ticket.png); background-size: cover;" /></h1>
-            </div>
-            <div class="nav-menu">
-                <a href="./">Home</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="payment-page">
-        <div class="payment-container">
-            <h2>Complete Your Payment</h2>
-            
-            <div class="payment-details" id="payment-details">
-                <div class="loading">
-                    <p style="margin-bottom: 3vh;">Memuat detail pembayaran...</p>
-                </div>
-            </div>
-            
-            <div class="qr-section">
-                <h3>Selesaikan Pembayaran Anda</h3>
-                <button id="pay-button" class="btn-primary" style="font-size: 1.2em; padding: 15px 30px; display: none; margin: 20px auto;">
-                Bayar Sekarang
-                </button>
-            </div>
-            
-            <div class="payment-status">
-                <div class="status-pending">
-                    <div class="loader"></div>
-                    <p>Menunggu pembayaran...</p>
-                </div>
-                <div class="status-completed" style="display: none;">
-                    <div class="success-icon">✓</div>
-                    <p>Pembayaran berhasil!</p>
-                    <p>Mengarahkan ke tiket Anda...</p>
-                </div>
-            </div>
-            
-            <div class="payment-instructions">
-                <h4>Cara Pembayaran:</h4>
-                <ol>
-                    <li>Scan QR code di atas menggunakan aplikasi pembayaran</li>
-                    <li>Masukkan nominal yang sesuai</li>
-                    <li>Konfirmasi pembayaran</li>
-                    <li>Tiket akan otomatis muncul setelah pembayaran berhasil</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-
-<script type="module">
-    const API_URL = 'https://ticket-app-backend-production-63b5.up.railway.app/api';
-    const NOMOR_WA_ADMIN = '6285852849326'; // <-- GANTI DENGAN NOMOR WA KAMU
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentId = urlParams.get('id'); // Ini payment_code
-    let checkInterval;
-
-    if (!paymentId) {
-        alert('Data pembayaran tidak valid!');
-        window.location.href = './';
-    }
-
-    async function loadPaymentDetails() {
-        try {
-            const response = await fetch(`${API_URL}/payments/${paymentId}`);
-            const payment = await response.json();
-
-            if (!response.ok) throw new Error(payment.message);
-
-            const detailsContainer = document.getElementById('payment-details');
-            detailsContainer.innerHTML = `
-                <div class="detail" style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
-                    <span class="label">Kode Pembayaran:</span>
-                    <span class="value" style="font-weight: bold;">${payment.payment_code}</span>
-                </div>
-                <div class="detail" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span class="label">Total Tagihan:</span>
-                    <span class="value" style="font-size: 1.2em; font-weight: bold; color: #d9534f;">Rp ${payment.amount.toLocaleString('id-ID')}</span>
-                </div>
-            `;
-
-            const qrSection = document.querySelector('.qr-section');
-            const statusSection = document.querySelector('.payment-status');
-            
-            // JIKA STATUS PENDING
-            if (payment.status === 'pending') {
-                qrSection.innerHTML = `
-                    <h3>Scan QRIS Berikut</h3>
-                    <img src="./images/QRIS.jpg" alt="QRIS" style="width: 100%; border: 2px solid #ddd; border-radius: 10px;">
-                    <p style="margin-top: 15px; font-weight: bold;">Setelah transfer, konfirmasi ke Admin kami!</p>
-                    <a href="https://wa.me/${NOMOR_WA_ADMIN}?text=Halo%20Admin,%20saya%20sudah%20membayar%20tiket.%0AKode%20Pembayaran:%20${payment.payment_code}%0ATotal:%20Rp%20${payment.amount}" 
-                       target="_blank" 
-                       style="display: inline-block; background: #25D366; color: white; padding: 12px 25px; border-radius: 5px; text-decoration: none; font-weight: bold; margin-top: 30px; font-size:3vh;">
-                        <i class="fa-brands fa-whatsapp"></i> Konfirmasi via WhatsApp
-                    </a>
-                `;
-
-                // Mulai auto-cek status setiap 5 detik
-                if(!checkInterval) {
-                    checkInterval = setInterval(cekStatusOtomatis, 5000);
-                }
-            } 
-            // JIKA STATUS COMPLETED
-            else if (payment.status === 'completed' && payment.ticket_code) {
-                if(checkInterval) clearInterval(checkInterval);
-                statusSection.innerHTML = `
-                    <div class="status-completed" style="text-align: center;">
-                        <i class="fa-solid fa-check" style="background:#4CAF50; color:white; font-size:30px; width:60px; height:60px; line-height:60px; border-radius:50%; margin: 0 auto 15px;"></i>
-                        <p style="font-weight:bold; color: #4CAF50; font-size:1.2em;">Pembayaran Berhasil Diverifikasi!</p>
-                        <p style="margin-top: 5px;">Mengarahkan ke E-Ticket Anda...</p>
-                    </div>
-                `;
-                qrSection.style.display = 'none';
-                
-                // Redirect ke halaman tiket dengan ticket_code dari tickets_sold
-                setTimeout(() => {
-                    window.location.href = `./ticket.html?code=${payment.ticket_code}`;
-                }, 2000);
-            }
-
-        } catch (error) {
-            document.getElementById('payment-details').innerHTML = `<p style="color: red; text-align: center;">${error.message}</p>`;
-        }
-    }
-
-    async function cekStatusOtomatis() {
-        const response = await fetch(`${API_URL}/payments/${paymentId}`);
-        
-        if (response.status === 401) {
-            alert('Sesi login Anda telah berakhir. Silakan login kembali.');
-            localStorage.removeItem('ticketAppToken');
-            localStorage.removeItem('ticketAppUser');
-            window.location.href = './login.html';
-            return;
-        }
-
-        const data = await response.json();
-        if (data.status === 'completed') {
-            loadPaymentDetails(); // Refresh UI dan Redirect
-        }
-    }
-
-    loadPaymentDetails();
-</script>
+<!doctype html>
+<html>
+  <head>
     <style>
-        .payment-page {
-            min-height: calc(100vh - 80px);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 20px;
-            margin-top: 2rem;
-        }
-        
-        .payment-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        
-        .payment-container h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #333;
-        }
-        
-        .payment-details {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-        
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        
-        .detail-label {
-            font-weight: 600;
-            color: #555;
-        }
-        
-        .detail-value {
-            color: #333;
-        }
-        
-        .detail-value.code {
-            font-family: monospace;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #667eea;
-        }
-        
-        .qr-section {
-            text-align: center;
-            margin: 30px 0;
-        }
-        
-        .qr-section h3 {
-            margin-bottom: 20px;
-            color: #555;
-        }
-        
-        .qr-code {
-            display: inline-block;
-            padding: 20px;
-            background: white;
-            border: 2px dashed #ddd;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .qr-info {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .payment-status {
-            margin: 30px 0;
-        }
-        
-        .status-pending, .status-completed {
-            text-align: center;
-        }
-        
-        .loader {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .success-icon {
-            width: 60px;
-            height: 60px;
-            background: #4CAF50;
-            color: white;
-            font-size: 30px;
-            line-height: 60px;
-            text-align: center;
-            border-radius: 50%;
-            margin: 0 auto 15px;
-        }
-        
-        .payment-instructions {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-        }
-        
-        .payment-instructions h4 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-        
-        .payment-instructions ol {
-            padding-left: 20px;
-            color: #666;
-        }
-        
-        .payment-instructions li {
-            margin: 5px 0;
-        }
-        
-        .status-completed {
-            color: #4CAF50;
-        }
-        
-        .status-pending {
-            color: #ff9800;
-        }
+      body,
+      html {
+        background: #EEEEF4;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        font-family: "Roboto", sans-serif;
+        font-weight: 100;
+        cursor: default;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+
+      .construction-message {
+        position: absolute;
+        top: 25%;
+        width: 100%;
+      }
+
+      h1 {
+        color: #999;
+        font-weight: 100;
+        font-size: 3em;
+      }
+
+      h2 {
+        color: #333333;
+        font-weight: 300;
+        font-size: 1.5em;
+      }
+
+      a {
+        font-weight: 300;
+        color: #999;
+        text-decoration: none;
+        font-size: 1.5em;
+      }
+
+      span {
+        color: #999;
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 0;
+        margin-left: 10px;
+      }
     </style>
-</body>
+  </head>
+  <body>
+    <div class="construction-message">
+      <h1>Site Under Maintenance</h1><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="100.001px" height="70px" viewBox="0 0 100 68">
+        <g id="large">
+          <g>
+            <path d="M55.777,38.473l6.221-1.133c0.017-1.791-0.123-3.573-0.41-5.324l-6.321-0.19c-0.438-2.053-1.135-4.048-2.076-5.931
+		l4.82-4.094c-0.868-1.552-1.874-3.028-3.005-4.417l-5.569,2.999c-1.385-1.54-2.98-2.921-4.771-4.099l2.124-5.954
+		c-0.759-0.452-1.543-0.878-2.357-1.269c-0.811-0.39-1.625-0.732-2.449-1.046l-3.325,5.381c-2.038-0.665-4.113-1.052-6.183-1.174
+		L31.34,6.002c-1.792-0.02-3.571,0.119-5.32,0.406l-0.191,6.32c-2.056,0.439-4.051,1.137-5.936,2.08l-4.097-4.82
+		c-1.546,0.872-3.022,1.875-4.407,3.006l2.996,5.566c-1.54,1.384-2.925,2.985-4.104,4.778c-2.16-0.771-4.196-1.498-5.953-2.127
+		c-0.449,0.765-0.875,1.544-1.265,2.354c-0.39,0.811-0.733,1.63-1.049,2.457c1.587,0.981,3.424,2.119,5.377,3.325
+		c-0.662,2.037-1.049,4.117-1.172,6.186l-6.218,1.136c-0.021,1.789,0.12,3.566,0.407,5.321l6.32,0.188
+		c0.442,2.06,1.143,4.057,2.082,5.937l-4.818,4.095c0.872,1.549,1.873,3.026,3.009,4.412l5.563-2.998
+		c1.392,1.54,2.989,2.92,4.777,4.099l-2.121,5.954c0.756,0.446,1.538,0.871,2.348,1.258c0.813,0.394,1.633,0.739,2.462,1.05
+		l3.326-5.375c2.033,0.662,4.109,1.05,6.175,1.17l1.137,6.221c1.791,0.019,3.569-0.123,5.323-0.407l0.194-6.324
+		c2.053-0.438,4.045-1.136,5.927-2.079l4.093,4.817c1.55-0.865,3.026-1.87,4.414-2.999l-2.995-5.572
+		c1.537-1.385,2.914-2.98,4.093-4.772l5.953,2.127c0.448-0.761,0.878-1.545,1.268-2.356c0.388-0.808,0.729-1.631,1.047-2.458
+		l-5.378-3.324C55.268,42.615,55.655,40.542,55.777,38.473z M42.302,42.435c-3.002,6.243-10.495,8.872-16.737,5.866
+		c-6.244-2.999-8.872-10.493-5.867-16.736c3.002-6.244,10.495-8.873,16.736-5.869C42.676,28.698,45.306,36.19,42.302,42.435z" fill="none" stroke="#999" />
+            <animateTransform attributeName="transform" begin="0s" dur="3s" type="rotate" from="0 31 37" to="360 31 37" repeatCount="indefinite" </animateTransform>
+          </g>
+          <g id="small">
+            <path d="M93.068,19.253L99,16.31c-0.371-1.651-0.934-3.257-1.679-4.776l-6.472,1.404c-0.902-1.436-2.051-2.735-3.42-3.819
+		l2.115-6.273c-0.706-0.448-1.443-0.867-2.213-1.238c-0.774-0.371-1.559-0.685-2.351-0.958l-3.584,5.567
+		c-1.701-0.39-3.432-0.479-5.118-0.284L73.335,0c-1.652,0.367-3.256,0.931-4.776,1.672l1.404,6.47
+		c-1.439,0.899-2.744,2.047-3.835,3.419c-2.208-0.746-4.38-1.476-6.273-2.114c-0.451,0.71-0.874,1.448-1.244,2.229
+		c-0.371,0.764-0.68,1.541-0.954,2.329c1.681,1.078,3.612,2.323,5.569,3.579c-0.399,1.711-0.486,3.449-0.291,5.145
+		c-2.086,1.034-4.143,2.055-5.936,2.945c0.368,1.648,0.929,3.25,1.67,4.769c1.954-0.426,4.193-0.912,6.468-1.405
+		c0.906,1.449,2.06,2.758,3.442,3.853l-2.117,6.27c0.708,0.449,1.439,0.865,2.218,1.236c0.767,0.371,1.551,0.685,2.338,0.96
+		c1.081-1.68,2.319-3.612,3.583-5.574c1.714,0.401,3.457,0.484,5.156,0.288L82.695,42c1.651-0.371,3.252-0.931,4.773-1.676
+		c-0.425-1.952-0.912-4.194-1.404-6.473c1.439-0.902,2.744-2.057,3.835-3.436l6.273,2.11c0.444-0.7,0.856-1.43,1.225-2.197
+		c0.372-0.777,0.691-1.569,0.963-2.361l-5.568-3.586C93.181,22.677,93.269,20.939,93.068,19.253z M84.365,24.062
+		c-1.693,3.513-5.908,4.991-9.418,3.302c-3.513-1.689-4.99-5.906-3.301-9.419c1.688-3.513,5.906-4.991,9.417-3.302
+		C84.573,16.331,86.05,20.549,84.365,24.062z" fill="none" stroke="#999" />
+            <animateTransform attributeName="transform" begin="0s" dur="2s" type="rotate" from="0 78 21" to="-360 78 21" repeatCount="indefinite" </animateTransform>
+          </g>
+      </svg>
+      <h2>Sorry for the inconvenience.<br>To contact us in the meantime please email</h2><a href="mailto:email">wisnu.chandra668@sma.belajar.id</a>
+    </div>
+    <p class="footer">TICKET APP</p>
+  </body>
 </html>
